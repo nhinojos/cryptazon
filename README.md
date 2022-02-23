@@ -1,6 +1,10 @@
-# Amazon-Product-Cryptocurrency-Cost
+# Amazon-Product-Cryptocurrency-Tracker
 ### Goal
-Finds the price of a given Amazon product in multiple cryptocurrencies. 
+Track the price of a given Amazon product in multiple cryptocurrencies. 
 ### Criteria
--Uses Amazon's API to find the product's price; does not 'webscrape.'
--Displays the costs in at least three different cryptocurrencies using realtime data. 
+-Tracks Amazon item price through routine webscraping.
+-Displays the costs in any cryptocurrency of choice using realtime data from Coinbase API.
+-Stores data in .xlsx document.
+-Emails users routinely of current price of item in crypto. Emphasizes significant price drops. 
+### Method
+I used Coinbase API for cryptocurrency ecxchange rates since they provide free, realtime data without any need for API authentication. Data is stored in an excel document for users to easily access and view from any device, including their cell phone, 
