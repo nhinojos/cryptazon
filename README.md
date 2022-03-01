@@ -2,7 +2,7 @@
 ### Background
 There are a plentiful amount of apps to track amazon products for price changes. Similarliy, you can use apps or view websites that track the price changes of every modern cryptocurrency. I am interested in conjoining both fields here, tracking who the value of an amazon product in terms of chosen cryptocurrencies.  
 ### Goal
-Track the price of a given Amazon product in multiple cryptocurrencies. 
+Track the price of a given Amazon product in multiple cryptocurrencies. Notifies user when pricepoint is below a specificed threshold.  
 ### Criteria
 - Tracks Amazon product's price through webscraping.
 - Displays the costs in any cryptocurrency of choice using realtime data from Coinbase API.
