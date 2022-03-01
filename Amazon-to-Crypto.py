@@ -21,25 +21,39 @@ def generateWorkbook(crypto_list):
     wb=Workbook()
     ws_data=wb.active
     ws_data.title = "Data"
-    # Labeling headers.
     ws_data['A1']="Currency"
     ws_data['B1']="Date" # Should range B1:n1, where B to n are the dates recorded.
-    # Labeling cryptos of choice in the left-most column.
+    
     for i,crypto in enumerate(crypto_list):
         ws_data['A'+str(i+2)]=crypto
-    #Creating separet worksheet analyze data
-    ws_analysis=wb.create_sheet("Analysis")
-    #Saving workbook
+    
+    wb.create_sheet("Analysis")
     wb.save('product_history.xlsx')
     return wb
 
-## Will continue a workbook if none-provided. 
+
+## Intializes new workbook if there is not one already in the directory. 
 if not os.path.exists('product_history.xlsx'):
     print('No workbook found in directory.')
     print('Initializing workbook generation.')
     product_link=input('Please provide a link to the amazon product:')
-    print('Now, here are a list of bitcoins ready')
-    generateWorkbook()
+    
+    print('Now, here are a list of cryptocurrencies available to track')
+    r=requests.get('https://api.coinbase.com/v2/exchange-rates').json()
+    crypto_options=r['data']['rates'].keys()
+    crypto_string=''
+    for i,crypto in enumerate(crypto_options):
+        crypto_string+=crypto+(10-len(crypto))*' '
+        if i%16==0:
+            print(crypto_string)
+            crypto_string=''
+    
+    print('Please type the abbreviated cryptocurrencies you would like to track, separated by commas:')
+    crypto_list=input()
+    crypto_list.upper()
+    crypto_list.replace(' ','')
+    crypto_list.split(',')
+    generateWorkbook(crypto_list)
 
 
 ## Requesting current cryptocurrency prices from CoinBase. 
