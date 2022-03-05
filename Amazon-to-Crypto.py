@@ -1,8 +1,11 @@
 ## Necessary Libararies.
+import imp
 import requests # Request real-time crypotcurrency data from Coinbase.
 from openpyxl import Workbook # Manipulating Excel Spreadsheet. Documentation: https://openpyxl.readthedocs.io/en/stable/.
 import yagmail #Simplified Gmail Delivery. Documentation: https://github.com/kootenpv/yagmail.
-import pickle # For saving python objects.
+from bs4 import BeautifulSoup
+import pickle 
+import time 
 
 
 ## Track products price history, tabulate cryptocurrency data, and email users. 
@@ -13,7 +16,7 @@ class productTracker:
         # self.workbook is the excel workbook where price data is stored and analyzed.
         # self.sender is the email delivering notifications.
         # self.recipient is the email being sent notifcations.
-    def __init__(self,link=None, crypto_target=None,sender=None,recipient=None,password_registered=False,password=None):
+    def __init__(self,link=None, name=None, crypto_target=None,sender=None,recipient=None,password_registered=False,password=None):
         ## Asks and validates product's web location 
         self.link=link
         while True:
@@ -29,6 +32,14 @@ class productTracker:
             for i in range(3):
                 print("")
 
+
+        ## Scrapes website data for product name if necessary
+        if name==None:
+            print('No name inputted, scraping link for name...')
+            self.name='<name_on_website>'
+            print(self.name)
+            print("If this name looks correct, press Enter. Otherwise, type a new name below:")
+            self.name=input()
 
 
         ## Determining what cryptocurrencies the user will track.
@@ -117,6 +128,7 @@ class productTracker:
 
     ## Notifies user through email.
     def emailNotification(self, title, content):
+        title=''
         yagmail.SMTP(self.sender).send(self.recipient,title,content)
         return
 
@@ -127,7 +139,7 @@ class productTracker:
 
 
     ## Saves workbook document to directory as Excel document. 
-    def saveToDirectory(self,object_name='product_tracker'):
+    def saveToDirectory(self,object_name='product_tracker'): #Subject to change since it salves both object and excel data. 
         self.workbook.save(object_name+'.xlsx')
         pickle.dump(self,open(object_name+'.pickle','wb'))
         return
