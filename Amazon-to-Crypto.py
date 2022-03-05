@@ -1,78 +1,89 @@
 ## Necessary Libararies.
-import requests 
+import requests # Request real-time crypotcurrency data from Coinbase
 from openpyxl import Workbook # Manipulating Excel Spreadsheet. Documentation: https://openpyxl.readthedocs.io/en/stable/
-import os.path
 import yagmail #Simplified Gmail Delivery. Documentation: https://github.com/kootenpv/yagmail
+import pickle #For saving python objects
 
-##Function Creation
-#Delivering with Gmail easily using yagmail
-def emailMessage(title,content,receiver,sender):
-    """ 
-    If you haven't done so already, register your email 
-    and password using python's secure  library 
-    'keyring.' Then, run the following command:
-    yagmail.register(gmailusername,mygmailpassword)
+#Primary object to track product, tabulate cryptocurrency data, and email users
+class productTracker:
+    #Initialize generates new object properties:
+        # self.link is the hyperlink to the Amazon product.
+        # self.crypto_target is the set of all cryptocurrencies being tracked
+            # This may be removed since the cryptocurrencies will also be stored in the workbook itself
+        # self.workbook is the excel workbook where price data is stored and analyzed
+        # self.sender is the email delivering notifications
+        # self.recipient is the email being sent notifcations
+    def __init__(self):
+        # Asks and validates product's web location 
+        valid=False
+        while not valid:
+            self.link=input('Please paste the link to the Amazon product you would like to track.')
+            try:
+                requests.get(self.link)
+            except:
+                print('Link not valid.')
+            else:
+                valid=True
+        
+        ## Determining what cryptocurrencies the user will track.
+        # Displaying cryptocurrency options
+        crypto_string=''
+        print('Here are the list of cryptocurrencies available to track:')
+        for i,crypto in enumerate(currencyData().keys()):
+            crypto_string+=crypto+(10-len(crypto))*' '
+            if i%16==0:
+                print(crypto_string)
+                crypto_string=''
     
-    You may also need to confirm 3rd party access to 
-    your Gmail account in order to run this program. 
-    """
-    yagmail.SMTP(sender).send(receiver,title,content)
-    return
-
-# Generates new Excel workbook.
-def generateWorkbook(crypto_list):
-    # Creating workbook object and data worksheet sub-object.
-    wb=Workbook()
-    ws_data=wb.active
-    ws_data.title = "Data"
-    ws_data['A1']="Currency"
-    ws_data['B1']="Date" # Should range B1:n1, where B to n are the dates recorded.
-    for i,crypto in enumerate(crypto_list):
-        ws_data['A'+str(i+2)]=crypto
-
-    wb.create_sheet("Analysis")
-    wb.save('product_history.xlsx')
-    return wb
-
-
-## Intializes new workbook if there is not one already in the directory. 
-if not os.path.exists('product_history.xlsx'):
-    print("No workbook titled 'product_history.xlsx' found in directory.")
-    while True:
-        response=input('Would you like to generate a new workbook?(y/n)')
-        response.lower()
-        response.strip()
-        if response in {'y','n','yes','no'}:
-            if response in {'n','no'}:
-                print("Please ensure a valid workbook titled 'product_history.xlsx' exists before restarting.")
-                quit()
-            break
-        else:
-            print('That is not a valid response.')
-    print('Initializing workbook generation.')
-
-    product_link=input('Please provide a link to the amazon product:')
-    
-    #Requesting Coinbase Data
-    print('Here are the list of cryptocurrencies available to track')
-    r=requests.get('https://api.coinbase.com/v2/exchange-rates').json()
-    crypto_options=r['data']['rates'].keys()
-    crypto_string=''
-    for i,crypto in enumerate(crypto_options):
-        crypto_string+=crypto+(10-len(crypto))*' '
-        if i%16==0:
-            print(crypto_string)
-            crypto_string=''
-
-    #Tracking proper currencies. 
-    print('Please type the abbreviated cryptocurrencies you would like to track, separated by commas:')
-    crypto_list=input()
-    crypto_list.upper()
-    crypto_list.replace(' ','')
-    crypto_list.split(',')
-    generateWorkbook(crypto_list)
-
-#Tabulates data to excel workbook. 
+        # Asks and validates user inputted cryptocurrenncies
+        print('Please type the abbreviated cryptocurrencies you would like to track, separated by commas:')
+        valid=False
+        while not valid:
+            self.crypto_target=input()
+            if len(self.crypto_target)==0:
+                continue
+            
+            #Conversts string to list to set
+            self.crypto_target.upper()
+            self.crypto_target.replace(' ','')
+            self.crypto_target=set(self.crypto_target.split(','))
+            valid=self.crypto_target.issubset(currencyData().keys())
+            if not valid:
+                print('Error, inputted currencies are either not available.')
+                print('Please makes sure you only input abbreviated cryptocurrencies, separated by commas:')
+            
+            else:
+                valid=True
 
 
+        ## Generate new Excel workbook.
+            # Includes two sheets, 'Data' and 'Analysis.'
+            # 'Data' contains two columns labeled 'Currency' and 'Date.'
+                # 'Date' will encompass all further columns from B onward. 
+            # Appends target cryptocurrencies under 'Currency' column.
+        self.workbook=Workbook() 
+        workbook_data=self.workbook.active
+        workbook_data.title = "Data" 
+        workbook_data['A1']="Currency" 
+        workbook_data['B1']="Date" 
+        for i,crypto in enumerate(self.crypto_target):
+            workbook_data['A'+str(i+2)]=crypto
+        self.workbook.create_sheet("Analysis")
+        self.workbook.save('product_history.xlsx')
+
+        #Registrating user emails.
+        self.recipient=input('What email would you like to be nofitied?')
+        self.sender=input('What email are you using to deliver notifications?')
+        password=input("What is the delivering emails' password?" ) # Password will not be saved in object instance.
+        yagmail.register(self.sender,password) # Stores username and password in Python's secure storage keyring library.
+        return
+
+    # Notifies user through email
+    def emailNotification(self, title, content):
+        yagmail.SMTP(self.sender).send(self.recipient,title,content)
+        return
+
+    # Returns JSON of current cryptocurrency data from Coinbase
+    def currencyData():
+        return requests.get('https://api.coinbase.com/v2/exchange-rates').json()['data']['rates']
 
