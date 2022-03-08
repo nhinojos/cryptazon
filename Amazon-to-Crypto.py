@@ -1,11 +1,11 @@
 ## Necessary Libararies.
-import imp
 import requests # Request real-time crypotcurrency data from Coinbase.
 from openpyxl import Workbook # Manipulating Excel Spreadsheet. Documentation: https://openpyxl.readthedocs.io/en/stable/.
 import yagmail #Simplified Gmail Delivery. Documentation: https://github.com/kootenpv/yagmail.
-from bs4 import BeautifulSoup
 import pickle 
-import time 
+from bs4 import BeautifulSoup
+from selenium import webdriver
+
 
 
 ## Track products price history, tabulate cryptocurrency data, and email users. 
@@ -16,7 +16,12 @@ class productTracker:
         # self.workbook is the excel workbook where price data is stored and analyzed.
         # self.sender is the email delivering notifications.
         # self.recipient is the email being sent notifcations.
-    def __init__(self,link=None, name=None, crypto_target=None,sender=None,recipient=None,password_registered=False,password=None):
+    def __init__(self,name=None, link=None, crypto_target=None,sender=None,recipient=None,password_registered=False,password=None):
+        ## Asks for a name for file naming
+        self.name=name
+        while self.name==None:
+            self.name=input('Please provide a name for this product:')
+
         ## Asks and validates product's web location 
         self.link=link
         while True:
@@ -56,7 +61,7 @@ class productTracker:
                 if type(self.crypto_target)==set: # Is this set valid?
                     if self.crypto_target.issubset(self.currencyData().keys()):
                         break
-    
+
                 print('Error, inputted currency types are not available.')
             
             else:
@@ -91,6 +96,8 @@ class productTracker:
         
 
         ## Registrating user emails.
+        self.recipient=recipient
+        self.sender=sender
         if None in [sender,recipient] or password_registered==False:
             print("Intializing Email registration.")
             print("If you would like to restart this process, type 'restart' into the command line.")
@@ -113,6 +120,7 @@ class productTracker:
                     continue
 
             if password_registered==False: #Validating and regisering password.
+                print('password_registered:',password_registered)
                 if password==None:
                     print("What is the delivering emails' password?")
                     password=input() # Password will not be saved in object instance.
@@ -133,12 +141,26 @@ class productTracker:
         return
 
 
-    ## Returns JSON of real-time cryptocurrency data from Coinbase.
+    ## Webscrapes Amazon for price data.
+    def getPrice(self):
+        # Steups a temporary chrome driver.
+        driver=webdriver.Chrome("C:\chromedriver.exe")
+        driver.get(self.link)
+        # Downloads HTML form BeautifulSoup to read.
+        with open("amazon_listing.html", "w",encoding='utf-8') as f:
+            f.write(driver.page_source)
+        with open("amazon_listing.html", "rb") as f:
+            soup=BeautifulSoup(f,'lxml')
+        # Returns the price within the HTML file.
+        return soup.find('span',class_='a-offscreen').text.replace('$','')
+
+
+    ## Returns real-time cryptocurrency data from Coinbase as .json().
     def currencyData(self):
         return requests.get('https://api.coinbase.com/v2/exchange-rates').json()['data']['rates']
 
 
-    ## Saves workbook document to directory as Excel document. 
+    ## Saves workbook to directory as Excel document. 
     def saveToDirectory(self,object_name='product_tracker'): #Subject to change since it salves both object and excel data. 
         self.workbook.save(object_name+'.xlsx')
         pickle.dump(self,open(object_name+'.pickle','wb'))
@@ -146,15 +168,18 @@ class productTracker:
     
 
 
-converse_shoes={"Link":'https://www.amazon.com/Converse-Chuck-Taylor-Women-Black/dp/B07DXHF5RG/?_encoding=UTF8&pd_rd_w=BD1NM&pf_rd_p=067e8e18-34c5-4e6e-8c6c-a4d937ff3226&pf_rd_r=S68JT9VAS1J7V44QMCK0&pd_rd_r=f6bfb1dd-37af-4119-9ca4-6c98d4f35d65&pd_rd_wg=BzfRp&ref_=pd_gw_ci_mcx_mi'
-                ,"Cryptocurrencies" : {'BTC','ETH'}
-                ,"Sender":'kitten.in.superposition@gmail.com'
-                ,"Recipient":'noah.hinojos@gmail.com'
+## Testing object by creating with product
+bucket_hat={"Link":'https://www.amazon.com/VIVICMW-Breathable-Bordered-Outdoor-Fishing/dp/B07PP5X1R2/ref=sr_1_15?crid=BZPV1QMESPUD&keywords=bucket+hat&qid=1646709505&sprefix=bucket+hat%2Caps%2C123&sr=8-15'
+            ,"Cryptocurrencies" : {'BTC','ETH'}
+            ,"Sender":'kitten.in.superposition@gmail.com'
+            ,"Recipient":'noah.hinojos@gmail.com'
                                     }
 
-converseShoes=productTracker(converse_shoes['Link'],
-                            converse_shoes['Cryptocurrencies'],
-                            converse_shoes['Sender'],
-                            converse_shoes['Recipient'],
-                            True)
-converseShoes.saveToDirectory()
+bucketHat=productTracker('bucket_hat',
+                        bucket_hat['Link'],
+                        bucket_hat['Cryptocurrencies'],
+                        bucket_hat['Sender'],
+                        bucket_hat['Recipient'],
+                        True)
+
+
