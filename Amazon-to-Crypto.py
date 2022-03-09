@@ -16,7 +16,7 @@ class productTracker:
         # self.workbook is the excel workbook where price data is stored and analyzed.
         # self.sender is the email delivering notifications.
         # self.recipient is the email being sent notifcations.
-    def __init__(self,name=None, link=None, crypto_target=None,sender=None,recipient=None,password_registered=False,password=None):
+    def __init__(self,name=None, link=None, cryptocurrencies=None,sender=None,recipient=None,password_registered=False,password=None):
         ## Asks for a name for file naming
         self.name=name
         while self.name==None:
@@ -49,23 +49,23 @@ class productTracker:
 
         ## Determining what cryptocurrencies the user will track.
         # Asks and validates inputted cryptocurrenncies.
-        self.crypto_target=crypto_target
+        self.cryptocurrencies=cryptocurrencies
         while True:
             #Conversts string to list to set.
-            if self.crypto_target!=None:
-                if type(self.crypto_target)==str: # Turns string to set.
-                    self.crypto_target.upper()
-                    self.crypto_target.replace(' ','')
-                    self.crypto_target=set(self.crypto_target.split(','))
+            if self.cryptocurrencies!=None:
+                if type(self.cryptocurrencies)==str: # Turns string to set.
+                    self.cryptocurrencies.upper()
+                    self.cryptocurrencies.replace(' ','')
+                    self.cryptocurrencies=set(self.cryptocurrencies.split(','))
                 
-                if type(self.crypto_target)==set: # Is this set valid?
-                    if self.crypto_target.issubset(self.currencyData().keys()):
+                if type(self.cryptocurrencies)==set: # Is this set valid?
+                    if self.cryptocurrencies.issubset(self.currencyData().keys()):
                         break
 
                 print('Error, inputted currency types are not available.')
             
+            # Displaying cryptocurrency options. Then, asks for user input.
             else:
-                # Displaying cryptocurrency options.
                 print('Here are the list of cryptocurrencies available to track:')
                 crypto_options=''
                 for i,crypto in enumerate(self.currencyData().keys()):
@@ -75,23 +75,17 @@ class productTracker:
                         crypto_options=''
             
             print('Please input the abbreviated cryptocurrencies you would like to track, separated by commas:')
-            self.crypto_target=input()
+            self.cryptocurrencies=input()
             for i in range(3):
                 print("")
 
 
         ## Generate new Excel workbook.
             # Includes two sheets, 'Data' and 'Analysis.'
-            # 'Data' contains two columns labeled 'Currency' and 'Date.'
-                # 'Date' will encompass all further columns from B onward. 
-            # Appends target cryptocurrencies under 'Currency' column.
         self.workbook=Workbook() 
-        workbook_data=self.workbook.active
-        workbook_data.title = "Data" 
-        workbook_data['A1']="Currency" 
-        workbook_data['B1']="Date" 
+        self.workbook.active.title="Data" 
         for i,crypto in enumerate(self.crypto_target):
-            workbook_data['A'+str(i+2)]=crypto
+            self.workbook["Data"]['A'+str(i+2)]=crypto
         self.workbook.create_sheet("Analysis")
         
 
@@ -142,14 +136,14 @@ class productTracker:
 
 
     ## Webscrapes Amazon for price data.
-    def getPrice(self):
-        # Steups a temporary chrome driver.
-        driver=webdriver.Chrome("C:\chromedriver.exe")
+    def scrapePrice(self):
+        # Setups temporary chrome driver.
+        driver=webdriver.Chrome("C:\chromedriver.exe") # LOCATION MUST CHANGE TO WHEREVER YOU STORE YOUR SELENIUM DRIVER
         driver.get(self.link)
         # Downloads HTML form BeautifulSoup to read.
-        with open("amazon_listing.html", "w",encoding='utf-8') as f:
+        with open("product_page.html", "w",encoding='utf-8') as f:
             f.write(driver.page_source)
-        with open("amazon_listing.html", "rb") as f:
+        with open("product_page.html", "rb") as f:
             soup=BeautifulSoup(f,'lxml')
         # Returns the price within the HTML file.
         return soup.find('span',class_='a-offscreen').text.replace('$','')
@@ -167,6 +161,20 @@ class productTracker:
         return
     
 
+    ## Appends price data to excel workbook
+    def appendPrice(self):
+        price_usd=self.scrapePrice()
+        ws_data=self.workbook["Data"]
+        for row in ws_data.iter_rows(min_col=1, max_col=1):
+            pass
+
+
+
+        time=time.strftime("%d %b %y, %H:%M",time.gmtime())    
+
+        
+
+
 
 ## Testing object by creating with product
 bucket_hat={"Link":'https://www.amazon.com/VIVICMW-Breathable-Bordered-Outdoor-Fishing/dp/B07PP5X1R2/ref=sr_1_15?crid=BZPV1QMESPUD&keywords=bucket+hat&qid=1646709505&sprefix=bucket+hat%2Caps%2C123&sr=8-15'
@@ -181,5 +189,6 @@ bucketHat=productTracker('bucket_hat',
                         bucket_hat['Sender'],
                         bucket_hat['Recipient'],
                         True)
+
 
 
