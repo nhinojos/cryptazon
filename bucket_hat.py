@@ -11,4 +11,7 @@ bucket_hat=ProductTracker('bucket_hat',
                         bucket_hat_data['Link'],
                         bucket_hat_data['Cryptocurrencies'],
                         bucket_hat_data['Sender'],
-                        bucket_hat_data['Recipient'])
+                        bucket_hat_data['Recipient'],
+                        True)
+
+bucket_hat.save_to_directory()

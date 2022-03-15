@@ -8,11 +8,25 @@ from selenium import webdriver # Temporary driver to load HTML: https://selenium
 import time # Records date
 
 ## Retrieves real-time cryptocurrency data from Coinbase.
-def currency_data():
-    return requests.get(
+    # If display _types is True, then the currency 
+    # types available will be displayed in the console. 
+def currency_data(display_types=False):
+    # Coinbase API call.
+    data=requests.get(
             'https://api.coinbase.com/v2/exchange-rates'
             ).json()['data']['rates']
-
+    # Displays cryptoccurrency keys neatly to user.
+    if display_types:
+        print('Here is a list of trackable cryptocurrencies:')
+        crypto_options=''
+        for i,crypto in enumerate(data.keys()):
+            crypto_options+=crypto+(10-len(crypto))*' '
+            if i%16==0:
+                print(crypto_options)
+                crypto_options=''
+        return None
+    else:
+        return data
 
 ## Return booleans for input equality. 
 ## Edits inputs beforehand based on inputted condition.
@@ -45,7 +59,7 @@ class ProductTracker:
     # Initialize generates new object properties:
         # self.filename is the user-decided name for file writing.
         # self.link is the hyperlink to the Amazon product.
-        # self.cryptocurrencies is the set() of all cryptocurrencies being tracked.
+        # self.cryptocurrencies is the list of all target cryptos. 
         # self.sender is the email delivering notifications.
         # self.recipient is the email being sent notifcations.
         # self.password is the sender email's password.
@@ -58,8 +72,7 @@ class ProductTracker:
 
         ## Asks for a name for file naming.
         while filename is None:
-            filename=input(
-                    'Please provide a filename, without any file suffix:')
+            filename=input('Please provide a filename, without any file suffix:')
         self.filename=filename
         print('Filename: ',self.filename)
         print('')
@@ -87,14 +100,7 @@ class ProductTracker:
         while not valid:
             # Asks for users to input crypotcurrencies if not already done. 
             if cryptocurrencies is None:
-                print('Here are the list of trackable cryptocurrencies:')
-                crypto_options=''
-                # Displays cryptoccurrency keys neatly to user.
-                for i,crypto in enumerate(currency_data().keys()):
-                    crypto_options+=crypto+(10-len(crypto))*' '
-                    if i%16==0:
-                        print(crypto_options)
-                        crypto_options=''
+                currency_data(display_types=True)
                 print('Please input the abbreviated cryptocurrencies') 
                 print('you would like to track, separated by commas:')
                 cryptocurrencies=input()
@@ -113,15 +119,22 @@ class ProductTracker:
 
 
         ## Generate new Excel workbook.
-            # Includes two sheets, 'Data' and 'Analysis.'
-        self.workbook=Workbook() 
-        self.workbook.active.title="Data" 
-        for i,crypto in enumerate(cryptocurrencies):
-            self.workbook["Data"]['A'+str(i+2)]=crypto
-        self.workbook.create_sheet("Analysis")
+        wb=Workbook() 
+        wb.active.title="Data" 
+        ws_data=wb["Data"]
+        ws_data['B1'].value='USD'
+        # Appends cryptocurrency choices to workbook
+        for col in ws_data.iter_cols(min_row=2,max_row=2,min_col=3,
+                                    max_col=3+len(self.cryptocurrencies)):
+            i=0
+            for cell in col:
+                cell.value=self.cryptocurrencies[i]
+                i+=1
         
+        wb.create_sheet("Analysis")
+        self.wb=wb
 
-        ## Determine's user emails.
+        ## Establishes user emails.
         if None in {recipient,sender,password}:
             print("Intializing Email registration.")
             if recipient is None: # Validating recipient email.
@@ -141,6 +154,7 @@ class ProductTracker:
                         # Password will not be saved within object instance.
                         password=string_confirm(
                             "Please enter sender email's password:") 
+        
         # Registration can be skipped if 
         # password is initially marked True.
         if password!=True:
@@ -158,19 +172,25 @@ class ProductTracker:
 
     ## Notifies user through email.
     def email_notification(self, title, content):
-        date=time.strftime("%d %b %y, %H:%M",time.gmtime())
-        title='Amazon-Crypto Tracker: '
+        date=time.strftime("%d %b %y, %H:%M%p",time.localtime())
+        title="Amazon-Crypto Tracker:"+self.filename+date
         yagmail.SMTP(self.sender).send(self.recipient,title,content)
         return None
 
+    # Establishes threshold. 
+    def set_threshold(self):
+        return
 
-    ## Saves object and excel workbook to directory 
-    def save_to_directory(self,filetype): 
-        #Subject to change since it saves both object and excel data. 
+
+    ## Saves excel workbook to directory. 
+    def save_workbook(self): 
         self.workbook.save(self.filename+'.xlsx')
-        pickle.dump(self,open(self.filename+'.pickle','wb'))
-        return None
+        return
     
+    ## Saves pickeled object to directory. 
+    def save_object(self):
+        pickle.dump(self,open(self.filename+'.pickle','wb'))
+        return
 
     ## Appends price data to excel workbook
     def append_price(self):
