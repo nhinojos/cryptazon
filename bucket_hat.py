@@ -14,4 +14,5 @@ bucket_hat=ProductTracker('bucket_hat',
                         bucket_hat_data['Recipient'],
                         True)
 
-bucket_hat.save_to_directory()
+
+bucket_hat.save_workbook()

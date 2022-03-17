@@ -34,7 +34,6 @@ def currency_data(display_types=False):
     # 's'  : Remove spaces in strings.
     # Strings variables can be combined for multiconditional edits.
         # Example,  'ls' : Lowercase and Remove Spaces. 
-## ***** Remove condition if this is only used for email verification.
 def string_confirm(prompt,condition):
     valid=False
     while not valid:
@@ -54,6 +53,7 @@ def string_confirm(prompt,condition):
             print('Inputs do not match.')
     return string_initial
 
+
 ## Track products price history, tabulate cryptocurrency data, and email users. 
 class ProductTracker:
     # Initialize generates new object properties:
@@ -65,7 +65,7 @@ class ProductTracker:
         # self.password is the sender email's password.
     def __init__(
             self, filename=None, link=None,
-            cryptocurrencies=None,
+            cryptocurrencies=None, threshold=None,
             sender=None, recipient=None,
             password=None,):
 
@@ -119,20 +119,22 @@ class ProductTracker:
 
 
         ## Generate new Excel workbook.
-        wb=Workbook() 
-        wb.active.title="Data" 
-        ws_data=wb["Data"]
+        workbook=Workbook() 
+        workbook.active.title="Data" 
+        ws_data=workbook["Data"]
         ws_data['B1'].value='USD'
         # Appends cryptocurrency choices to workbook
-        for col in ws_data.iter_cols(min_row=2,max_row=2,min_col=3,
-                                    max_col=3+len(self.cryptocurrencies)):
-            i=0
+        i=0
+        for col in ws_data.iter_cols(min_row=1,max_row=1,min_col=3,
+                                    max_col=2+len(self.cryptocurrencies)):
             for cell in col:
                 cell.value=self.cryptocurrencies[i]
                 i+=1
-        
-        wb.create_sheet("Analysis")
-        self.wb=wb
+        ws_data['A2']="Threshold"
+        if threshold=None:
+            threshold=
+        workbook.create_sheet("Analysis")
+        self.workbook=workbook
 
         ## Establishes user emails.
         if None in {recipient,sender,password}:
@@ -193,26 +195,49 @@ class ProductTracker:
         return
 
     ## Appends price data to excel workbook
-    def append_price(self):
+    def get_price(self,in_usd=True):
         ## Webscrapes price through Selenium Chrome driver. 
         driver=webdriver.Chrome("C:\chromedriver.exe") # LOCATION MUST CHANGE TO WHEREVER YOU STORE YOUR SELENIUM DRIVER
         driver.get(self.link)
+        
         with open("product_page.html", "w",encoding='utf-8') as f:
             f.write(driver.page_source)
         with open("product_page.html", "rb") as f:
             soup=BeautifulSoup(f,'lxml')
-        price_usd=soup.find('span',class_='a-offscreen').text.replace('$','')
+        price_usd =soup.find('span',class_='a-offscreen').text.replace('$','')
         
-        # Converts price to cryptocurrency
-        price_crypto=[]
-        for crypto in self.cryptocurrencies:
-            price_crypto.append(price_usd*currency_data[crypto])
-        # Appends to workbook
-        ws_data=self.workbook["Data"]
-        for row in ws_data.iter_rows(min_col=1, max_col=1):
-            pass
+        #Reutrns in terms of USD
+        if in_usd==True:
+            return price_usd
+        # Returns in terms of self.crypticurrencies
+        else:
+            # Converts price to cryptocurrency
+            price_crypto=[]
+            for crypto in self.cryptocurrencies:
+                price_crypto.append(price_usd*currency_data[crypto])
+            return price_crypto
+            
 
-        time=time.strftime("%d %b %y, %H:%M",time.gmtime())
+        
+        
+        
+    #Adds prices to workbook
+    def update_workbook(self,prices):
+        ws_data=self.workbook["Data"]
+        # Date in left-most cell
+        ws_data['A'+str(ws_data.max_row+1)]=time.strftime("%d %b %y, %H:%M%p",time.localtime())
+        # Then, usd price
+        ws_data['B'+str(ws_data.max_row)]=self.get_price()
+        # Finally, crypto prices
+        i=0
+        for col in ws_data.iter_rows(min_row=ws_data.max_row,
+                                    max_row=ws_data.max_row,
+                                    min_col=3, max_col=2+len(self.cryptocurrencies)):
+            
+            for cell in col:
+                cell.value=prices[i]
+                i+=1
+
         return None    
 
         
