@@ -34,7 +34,7 @@ def currency_data(display_types=False):
     # 's'  : Remove spaces in strings.
     # Strings variables can be combined for multiconditional edits.
         # Example,  'ls' : Lowercase and Remove Spaces. 
-def string_confirm(prompt,condition):
+def string_confirm(prompt,condition=None):
     valid=False
     while not valid:
         print(prompt)
@@ -131,8 +131,9 @@ class ProductTracker:
                 cell.value=self.cryptocurrencies[i]
                 i+=1
         ws_data['A2']="Threshold"
-        if threshold=None:
-            threshold=
+        if threshold==None:
+            threshold=self.get_price()
+            print('Amazon item price in USD:',threshold)
         workbook.create_sheet("Analysis")
         self.workbook=workbook
 
@@ -144,18 +145,20 @@ class ProductTracker:
             if sender is None:
                sender=string_confirm('Please input sender email:','ls')
             if password is None: # Validating and registering password
-                print('No password registered.')
+                print("No password detected.")
                 valid=False
                 while not valid:
                     print("Is the sender email already registered?(y/n)")
                     response=input()
                     if response.lower() not in {'y','yes','n','no'}:
                         print('That is not a proper response.')
-                    elif response.lower() in {'n','no'}:
-                        print("What is the delivering email's password?")
-                        # Password will not be saved within object instance.
-                        password=string_confirm(
+                    else:
+                        if response.lower() in {'n','no'}:
+                            print("What is the delivering email's password?")
+                            # Password will not be saved within object instance.
+                            password=string_confirm(
                             "Please enter sender email's password:") 
+                        valid=True
         
         # Registration can be skipped if 
         # password is initially marked True.
@@ -182,7 +185,6 @@ class ProductTracker:
     # Establishes threshold. 
     def set_threshold(self):
         return
-
 
     ## Saves excel workbook to directory. 
     def save_workbook(self): 
@@ -218,9 +220,6 @@ class ProductTracker:
             return price_crypto
             
 
-        
-        
-        
     #Adds prices to workbook
     def update_workbook(self,prices):
         ws_data=self.workbook["Data"]
