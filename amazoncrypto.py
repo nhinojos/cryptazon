@@ -28,31 +28,6 @@ def currency_data(display_types=False):
     else:
         return data
 
-## Return booleans for input equality. 
-## Edits inputs beforehand based on inputted condition.
-    # 'l'  : Lowercase strings.
-    # 's'  : Remove spaces in strings.
-    # Strings variables can be combined for multiconditional edits.
-        # Example,  'ls' : Lowercase and Remove Spaces. 
-def string_confirm(prompt,condition=None):
-    valid=False
-    while not valid:
-        print(prompt)
-        string_initial=input()
-        print('Please type again to confirm.')
-        string_confirm=input()
-        if 'l' in condition:
-            string_initial.lower()
-            string_confirm.lower()
-        if 's' in condition:
-            string_initial.replace(' ','')
-            string_confirm.replace(' ','')
-        if string_initial == string_confirm:
-            valid=True
-        else:
-            print('Inputs do not match.')
-    return string_initial
-
 
 ## Track products price history, tabulate cryptocurrency data, and email users. 
 class ProductTracker:
@@ -64,66 +39,21 @@ class ProductTracker:
         # self.recipient is the email being sent notifcations.
         # self.password is the sender email's password.
     def __init__(
-            self, filename=None, link=None,
-            cryptocurrencies=None, threshold=None,
-            sender=None, recipient=None,
-            password=None,):
+            self, filename, link, cryptocurrencies,
+            email_recipient, email_sender,  
+            threshold=None, password=None):
 
-
-        ## Asks for a name for file naming.
-        while filename is None:
-            filename=input('Please provide a filename, without any file suffix:')
         self.filename=filename
-        print('Filename: ',self.filename)
-        print('')
-
-        ## Asks and validates product's web location.
-        valid=False
-        while not valid:
-            try:
-                requests.get(link)
-            except requests.exceptions.MissingSchema:
-                if link is not None:
-                    print('Dysfuntional link inputted.')
-                print("Please paste the link to the Amazon product:")
-                link=input()
-            else:
-                valid=True
         self.link=link
-        print('Link: ',link)
-        print('')
-
-
-        ## Determining what cryptocurrencies the user will track.
-            # Permits list, str, and None inputs.
-        valid=False
-        while not valid:
-            # Asks for users to input crypotcurrencies if not already done. 
-            if cryptocurrencies is None:
-                currency_data(display_types=True)
-                print('Please input the abbreviated cryptocurrencies') 
-                print('you would like to track, separated by commas:')
-                cryptocurrencies=input()
-            if type(cryptocurrencies) is str: # Turns string to list.
-                cryptocurrencies.upper()
-                cryptocurrencies.replace(' ','')
-                cryptocurrencies=cryptocurrencies.split(',')
-            if type(cryptocurrencies) is list: # Checks availability.
-                valid=set(cryptocurrencies).issubset(currency_data().keys())
-                if valid==False:
-                    print('Inputted cryptocurrencies are not available.')
-                    cryptocurrencies=None
         self.cryptocurrencies=cryptocurrencies
-        print('Cryptocurrencies: ',cryptocurrencies)
-        print('')
-
+        self.email_sender=email_sender
+        self.email_recipient=email_recipient
 
         ## Generate new Excel workbook.
         workbook=Workbook() 
         workbook.active.title="Data" 
         ws_data=workbook["Data"]
         ws_data['B1'].value='USD'
-        # Appends cryptocurrency choices to workbook
         i=0
         for col in ws_data.iter_cols(min_row=1,max_row=1,min_col=3,
                                     max_col=2+len(self.cryptocurrencies)):
@@ -137,41 +67,10 @@ class ProductTracker:
         workbook.create_sheet("Analysis")
         self.workbook=workbook
 
-        ## Establishes user emails.
-        if None in {recipient,sender,password}:
-            print("Intializing Email registration.")
-            if recipient is None: # Validating recipient email.
-                recipient=string_confirm('Please input recipient email:','ls')
-            if sender is None:
-               sender=string_confirm('Please input sender email:','ls')
-            if password is None: # Validating and registering password
-                print("No password detected.")
-                valid=False
-                while not valid:
-                    print("Is the sender email already registered?(y/n)")
-                    response=input()
-                    if response.lower() not in {'y','yes','n','no'}:
-                        print('That is not a proper response.')
-                    else:
-                        if response.lower() in {'n','no'}:
-                            print("What is the delivering email's password?")
-                            # Password will not be saved within object instance.
-                            password=string_confirm(
-                            "Please enter sender email's password:") 
-                        valid=True
-        
-        # Registration can be skipped if 
-        # password is initially marked True.
-        if password!=True:
-            # Stores username and password in Python's
-            # secure storage keyring library.
-            yagmail.register(sender,password) 
-        self.sender=sender
-        print('Sender Email: ', self.sender)
-        print('')
-        self.recipient=recipient
-        print('Recipient Email: ', self.recipient)
-        print('')
+        #Establishes emails and password, if relevant
+        if password!=None:
+            yagmail.register(email_sender,password) 
+        t
         return 
 
 
