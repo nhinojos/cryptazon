@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup # For parsing HTML: https://www.crummy.com/softwar
 from selenium import webdriver # Temporary driver to load HTML: https://selenium-python.readthedocs.io/
 import time # Records date
 
+
 ## Retrieves real-time cryptocurrency data from Coinbase.
     # If display _types is True, then the currency 
     # types available will be displayed in the console. 
@@ -38,18 +39,21 @@ class ProductTracker:
         # self.sender is the email delivering notifications.
         # self.recipient is the email being sent notifcations.
         # self.password is the sender email's password.
+        # self.driver_location is the file location of your chrome driver. 
     def __init__(
             self, filename, link, cryptocurrencies,
             email_recipient, email_sender,  
-            threshold=None, password=None):
+            threshold=None, password=None,
+            driver_location="C:\chromedriver.exe"):
 
         self.filename=filename
         self.link=link
         self.cryptocurrencies=cryptocurrencies
         self.email_sender=email_sender
         self.email_recipient=email_recipient
+        self.driver_location=driver_location
 
-        ## Generate new Excel workbook.
+        # Generate new Excel workbook.
         workbook=Workbook() 
         workbook.active.title="Data" 
         ws_data=workbook["Data"]
@@ -63,14 +67,14 @@ class ProductTracker:
         ws_data['A2']="Threshold"
         if threshold==None:
             threshold=self.get_price()
-            print('Amazon item price in USD:',threshold)
+        ws_data['A3']=threshold
+        
         workbook.create_sheet("Analysis")
         self.workbook=workbook
 
-        #Establishes emails and password, if relevant
+        # Establishes emails and password, if relevant
         if password!=None:
-            yagmail.register(email_sender,password) 
-        t
+            yagmail.register(email_sender,password)
         return 
 
 
@@ -82,7 +86,8 @@ class ProductTracker:
         return None
 
     # Establishes threshold. 
-    def set_threshold(self):
+    def new_threshold(self,threshold):
+        self.threshold=threshold
         return
 
     ## Saves excel workbook to directory. 
@@ -98,7 +103,7 @@ class ProductTracker:
     ## Appends price data to excel workbook
     def get_price(self,in_usd=True):
         ## Webscrapes price through Selenium Chrome driver. 
-        driver=webdriver.Chrome("C:\chromedriver.exe") # LOCATION MUST CHANGE TO WHEREVER YOU STORE YOUR SELENIUM DRIVER
+        driver=webdriver.Chrome(self.driver_location) 
         driver.get(self.link)
         
         with open("product_page.html", "w",encoding='utf-8') as f:
@@ -108,7 +113,7 @@ class ProductTracker:
         price_usd =soup.find('span',class_='a-offscreen').text.replace('$','')
         
         #Reutrns in terms of USD
-        if in_usd==True:
+        if in_usd:
             return price_usd
         # Returns in terms of self.crypticurrencies
         else:
@@ -119,7 +124,7 @@ class ProductTracker:
             return price_crypto
             
 
-    #Adds prices to workbook
+    # Adds prices to workbook
     def update_workbook(self,prices):
         ws_data=self.workbook["Data"]
         # Date in left-most cell
