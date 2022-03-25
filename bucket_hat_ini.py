@@ -16,4 +16,4 @@ bucket_hat=ProductTracker('bucket_hat',
                         bucket_hat_data['Recipient'])
 
 
-bucket_hat.save()
+bucket_hat.update_pickle()

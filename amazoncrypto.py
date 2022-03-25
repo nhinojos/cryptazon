@@ -1,6 +1,6 @@
 ## Necessary Libararies.
 import requests # Request real-time crypotcurrency data from Coinbase.
-from openpyxl import Workbook # Manipulating Excel Spreadsheet. https://openpyxl.readthedocs.io/en/stable/.
+from openpyxl import Workbook, load_workbook # Manipulating Excel Spreadsheet. https://openpyxl.readthedocs.io/en/stable/.
 import yagmail # Simplified Gmail Delivery. https://github.com/kootenpv/yagmail.
 import pickle # To serialize python objects. https://docs.python.org/3/library/pickle.html
 from bs4 import BeautifulSoup # For parsing HTML: https://www.crummy.com/software/BeautifulSoup/bs4/doc/
@@ -72,7 +72,7 @@ class ProductTracker:
                 i+=1
         ws_data['A2']="Threshold"
         ws_data.column_dimensions['A'].width=17
-        self.workbook=workbook
+        workbook.save(filename+'.xlsx')
         
         # Appends threshold rates under column headers
         if threshold==None:
@@ -88,8 +88,10 @@ class ProductTracker:
 
     # Updates row of data in "Data" worksheet
     def update_data(self,price=None):
-        # Establishing initial variabless
-        ws_data=self.workbook["Data"]
+        # Establishing initial variables.
+        workbook=load_workbook(self.filename+".xlsx")
+        ws_data=workbook["Data"]
+        
         
         # row_target depends on wheter new data is being added,
         # or if inputted price is altering threshold row.
@@ -113,7 +115,8 @@ class ProductTracker:
             for i,cell in enumerate(row):
                 cell.value=exchange_rates[i]
         
-        self.save()
+        # Saving to workbook. 
+        workbook.save(self.filename+'.xlsx')
         return
 
     ## Retrieves price through webscraping.
@@ -132,15 +135,13 @@ class ProductTracker:
         price_usd=soup.find('span',class_='a-offscreen').text.replace('$','')
         return float(price_usd)
 
+
     ## Saves object and workbook to directory.
-    def save(self,filename=None):
+    def update_pickle(self,filename=None):
         # A new filename may be specified to generate new save instance.
         if filename==None:
             filename=self.filename
-        
-        # Saving workbook.
-        self.workbook.save(filename + '.xlsx')
-        
+
         # Saving pickled object.
         pickle_file=open(filename+'.pickle','wb')
         pickle.dump(self,pickle_file)
