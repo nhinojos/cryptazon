@@ -1,6 +1,6 @@
 import pickle
-from __path__.amazoncrypto import ProductTracker
-# 
+import methods.tracker
+
 with open("bucket hat\\bucket_hat.pickle","r+b") as f:
     bucket_hat = pickle.load(f)
     f.close()

@@ -1,5 +1,5 @@
 # Test object as Bucket Hat from Amazon
-from amazoncrypto import ProductTracker
+from methods.tracker import ProductTracker
 
 
 ## Testing object with bucket hat product.
