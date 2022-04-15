@@ -49,7 +49,7 @@ class ProductTracker:
             threshold=None, password = None,
             driver_location = "C:\chromedriver.exe"):
 
-        # Establishing necessary variables
+        # Establishing inputted variables to self. 
         self.filename = filename
         self.link = link
         self.cryptocurrencies = cryptocurrencies
@@ -92,7 +92,6 @@ class ProductTracker:
         workbook = load_workbook(self.filename+".xlsx")
         ws_data = workbook["Data"]
         
-        
         # row_target depends on wheter new data is being added,
         # or if inputted price is altering threshold row.
         if price == None:
@@ -100,7 +99,7 @@ class ProductTracker:
             row_target = ws_data.max_row + 1
             row_target_title = ws_data.cell(row_target,1)
             row_target_title.value = time.strftime("%d %b %y, %H:%M%p",
-                                                 time.localtime())
+                                                   time.localtime())
         else:
             row_target = 2
         
@@ -117,7 +116,7 @@ class ProductTracker:
         
         # Saving to workbook. 
         workbook.save(self.filename + '.xlsx')
-        return
+        return 
 
     ## Retrieves price through webscraping.
     def get_price(self):
@@ -136,23 +135,21 @@ class ProductTracker:
         return float(price_usd)
 
 
-    ## Saves object and workbook to directory.
-    def update_pickle(self,filename=None):
-        # A new filename may be specified to generate new save instance.
-        if filename == None:
-            filename = self.filename
-
-        # Saving pickled object.
-        pickle_file = open(filename +'.pickle','wb')
+    ## Saves object to directory.
+    # A different filename may be specified to generate alternate pickle instance.
+    def update_pickle(self,filename = None):
+        if filename != None:
+            self.filename = filename
+        pickle_file = open(filename +'.pickle', 'wb')
         pickle.dump(self,pickle_file)
-        return
+        return 
 
     ## Delivers email notification to user.
     def email_notification(self, title, content):
         date = time.strftime("%d %b %y, %H:%M%p",time.localtime())
         title = "Amazon-Crypto Tracker:" + self.filename + date
         yagmail.SMTP(self.sender).send(self.recipient,title,content)
-        return None
+        return 
 
 
 
