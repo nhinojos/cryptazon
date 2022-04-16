@@ -1,5 +1,3 @@
-import pickle
-import methods.tracker
 
 with open("bucket hat\\bucket_hat.pickle","r+b") as f:
     bucket_hat = pickle.load(f)
