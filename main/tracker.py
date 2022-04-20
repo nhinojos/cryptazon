@@ -6,29 +6,30 @@ import pickle # To serialize python objects. https://docs.python.org/3/library/p
 from bs4 import BeautifulSoup # For parsing HTML: https://www.crummy.com/software/BeautifulSoup/bs4/doc/
 from selenium import webdriver # Temporary driver to load HTML: https://selenium-python.readthedocs.io/
 import time # Records date
+import os
 
 
 ## Retrieves real-time cryptocurrency data from Coinbase.
     # If display_types is True, then the currency 
     # types available will be displayed in the console. 
-def currency_data(display_types = False):
+def currency_data(cmd_display = False):
     # Coinbase API call.
     data=requests.get(
             'https://api.coinbase.com/v2/exchange-rates'
             ).json()['data']['rates']
     # Displays cryptoccurrency keys neatly to user.
-    if display_types:
+    if cmd_display:
         print('Here is a list of trackable cryptocurrencies:')
         crypto_options = ''
         for i,crypto in enumerate(data.keys()):
             crypto_options += crypto + (10 - len(crypto))*' '
-            if i % 16 == 0:
+            if i % 12 == 0:
                 print(crypto_options)
                 crypto_options = ''
         return None
+    
     else:
         return data
-
 
 ## Tracks products price history, 
 ## tabulates cryptocurrency data, 
@@ -42,14 +43,14 @@ class ProductTracker:
         # self.recipient is the email being sent notifcations.
         # self.password is the sender email's password.
         # self.driver_location is the file location of chrome driver. 
-            # My default is the C:\. 
+            # My default is C:\. 
     def __init__(
             self, filename, link, cryptocurrencies,
             email_recipient, email_sender,  
             threshold=None, password = None,
             driver_location = "C:\chromedriver.exe"):
 
-        # Establishing inputted variables to self. 
+        ## Establishing inputted variables to self. 
         self.filename = filename
         self.link = link
         self.cryptocurrencies = cryptocurrencies
@@ -57,7 +58,7 @@ class ProductTracker:
         self.email_recipient = email_recipient
         self.driver_location = driver_location
 
-        # Generates new Excel workbook.
+        ## Generates new Excel workbook.
         workbook = Workbook() 
         workbook.active.title = "Data"
         workbook.create_sheet("Analysis") 
@@ -72,24 +73,23 @@ class ProductTracker:
                 i += 1
         ws_data['A2'] = "Threshold"
         ws_data.column_dimensions['A'].width = 17
-        workbook.save(filename + '.xlsx')
-        
+        workbook.save("data\\"+ self.filename + '.xlsx')
         # Appends threshold rates under column headers
         if threshold == None:
             threshold = self.get_price()
-        self.update_data(threshold)
+        self.update_xl(threshold)
         
-        # Registers delivering email and password,
+        ## Registers delivering email and password,
         # if not done so already.
         if password != None:
             yagmail.register(email_sender,password)
 
         return 
 
-    # Updates row of data in "Data" worksheet
-    def update_data(self,price=None):
+    ## Updates row of data in "Data" worksheet
+    def update_xl(self,price=None):
         # Establishing initial variables.
-        workbook = load_workbook(self.filename+".xlsx")
+        workbook = load_workbook("data\\" + self.filename + ".xlsx")
         ws_data = workbook["Data"]
         
         # row_target depends on wheter new data is being added,
@@ -103,7 +103,7 @@ class ProductTracker:
         else:
             row_target = 2
         
-        # Lists exchange rates of price, along with price itself. 
+        # Defines list of exchange rates of price, along with USD price itself. 
         exchange_rates = [price]
         for crypto in self.cryptocurrencies:
             exchange_rates.append(float(currency_data()[crypto])*price)
@@ -115,7 +115,7 @@ class ProductTracker:
                 cell.value = exchange_rates[i]
         
         # Saving to workbook. 
-        workbook.save(self.filename + '.xlsx')
+        workbook.save("data\\" + self.filename + '.xlsx')
         return 
 
     ## Retrieves price through webscraping.
@@ -125,11 +125,11 @@ class ProductTracker:
         driver.get(self.link)
         
         # Writes product page HTML to a document within directory.
-        with open("product_page.html", "w",encoding = 'utf-8') as f:
+        with open("data\\" + self.filename + "_page.html", "w",encoding = 'utf-8') as f:
             f.write(driver.page_source)
         
         # Retrieves price from HTML document. 
-        with open("product_page.html", "rb") as f:
+        with open("data\\" + self.filename + "_page.html", "rb") as f:
             soup = BeautifulSoup(f,'lxml')
         price_usd = soup.find('span',class_='a-offscreen').text.replace('$','')
         return float(price_usd)
@@ -137,10 +137,13 @@ class ProductTracker:
 
     ## Saves object to directory.
     # A different filename may be specified to generate alternate pickle instance.
-    def update_pickle(self,filename = None):
-        if filename != None:
-            self.filename = filename
-        pickle_file = open(filename +'.pickle', 'wb')
+    def save_pickle(self,filename = None):
+        # Uses own filename if none inputted. 
+        if filename == None:
+            filename = self.filename
+        
+        # Opens file and rewrites pickle. 
+        pickle_file = open("data\\" + filename + '.pickle', 'wb')
         pickle.dump(self,pickle_file)
         return 
 
