@@ -1,165 +1,112 @@
-## Necessary Libararies.
-import requests # Request real-time crypotcurrency data from Coinbase.
-from openpyxl import Workbook, load_workbook # Manipulating Excel Spreadsheet. https://openpyxl.readthedocs.io/en/stable/.
-import yagmail # Simplified Gmail Delivery. https://github.com/kootenpv/yagmail.
-import pickle # To serialize python objects. https://docs.python.org/3/library/pickle.html
-from bs4 import BeautifulSoup # For parsing HTML: https://www.crummy.com/software/BeautifulSoup/bs4/doc/
-from selenium import webdriver # Temporary driver to load HTML: https://selenium-python.readthedocs.io/
-import time # Records date
-import os
+import requests
+from time import strftime, localtime
+import yagmail
+import numpy as np
+import pandas as pd
+from bs4 import BeautifulSoup
+from selenium import webdriver
+
+# Present data & time.
+time_present = strftime("%d-%b-%Y %H:%m", localtime())
+
+# Retrieves real-time cryptocurrency data from Coinbase.
+def currency_data(display=False):
+    # API call for a dictionary of rates.
+    data = requests.get(
+        'https://api.coinbase.com/v2/exchange-rates'
+    ).json()['data']['rates']
+
+    # Prints cryptocurrency options to console.
+    if display:
+        print('Trackable cryptocurrencies:')
+        print(i for i in list(data.keys()))
+
+    return data
+
+# Webscrapes price of Amazon product.
 
 
-## Retrieves real-time cryptocurrency data from Coinbase.
-    # If display_types is True, then the currency 
-    # types available will be displayed in the console. 
-def currency_data(cmd_display = False):
-    # Coinbase API call.
-    data=requests.get(
-            'https://api.coinbase.com/v2/exchange-rates'
-            ).json()['data']['rates']
-    # Displays cryptoccurrency keys neatly to user.
-    if cmd_display:
-        print('Here is a list of trackable cryptocurrencies:')
-        crypto_options = ''
-        for i,crypto in enumerate(data.keys()):
-            crypto_options += crypto + (10 - len(crypto))*' '
-            if i % 12 == 0:
-                print(crypto_options)
-                crypto_options = ''
-        return None
-    
-    else:
-        return data
+def scrape_price(link, driver_location, filename='product'):
+    # Initiates Selenium Chrome driver.
+    driver = webdriver.Chrome(driver_location)
+    driver.get(link)
 
-## Tracks products price history, 
-## tabulates cryptocurrency data, 
-## and emails users. 
+    # Retrieves price from HTML.
+    with open("data\\"
+              + filename
+              + "_page.html",
+              "w", encoding='utf-8') as f:
+        f.write(driver.page_source)
+    with open("data\\"
+              + filename
+              + "_page.html",
+              "rb") as f:
+        soup = BeautifulSoup(f, 'lxml')
+    price_usd = soup.find('span',
+                          class_='a-offscreen').text.replace('$', '')
+
+    return float(price_usd)
+
+
+# Tracks products price history, notifies of changes.
 class ProductTracker:
-    # Initialize generates new object properties:
-        # self.filename is the user-decided name for file writing.
-        # self.link is the hyperlink to the Amazon product.
-        # self.cryptocurrencies is the list of all target cryptos. 
-        # self.sender is the email delivering notifications.
-        # self.recipient is the email being sent notifcations.
-        # self.password is the sender email's password.
-        # self.driver_location is the file location of chrome driver. 
-            # My default is C:\. 
     def __init__(
-            self, filename, link, cryptocurrencies,
-            email_recipient, email_sender,  
-            threshold=None, password = None,
-            driver_location = "C:\chromedriver.exe"):
+            self,
+            link,
+            currencies: "list",
+            email_recipient,
+            email_sender,
+            password=None,
+            cryptothresh: "dict" = None,
+            dataframe=None,
+            filename='product',
+            driver_loc="C:\\chromedriver.exe"):
 
-        ## Establishing inputted variables to self. 
+        # Establishing required variables to self.
         self.filename = filename
         self.link = link
-        self.cryptocurrencies = cryptocurrencies
         self.email_sender = email_sender
         self.email_recipient = email_recipient
-        self.driver_location = driver_location
+        self.driver_loc = driver_loc
 
-        ## Generates new Excel workbook.
-        workbook = Workbook() 
-        workbook.active.title = "Data"
-        workbook.create_sheet("Analysis") 
-        ws_data = workbook["Data"]
-        # Appends inital row & coumn titles
-        ws_data['B1'].value = 'USD'
-        i = 0
-        for col in ws_data.iter_cols(min_row = 1,max_row = 1,min_col = 3,
-                                    max_col = 2 + len(self.cryptocurrencies)):
-            for cell in col:
-                cell.value = self.cryptocurrencies[i]
-                i += 1
-        ws_data['A2'] = "Threshold"
-        ws_data.column_dimensions['A'].width = 17
-        workbook.save("data\\"+ self.filename + '.xlsx')
-        # Appends threshold rates under column headers
-        if threshold == None:
-            threshold = self.get_price()
-        self.update_xl(threshold)
-        
-        ## Registers delivering email and password,
-        # if not done so already.
-        if password != None:
-            yagmail.register(email_sender,password)
-
-        return 
-
-    ## Updates row of data in "Data" worksheet
-    def update_xl(self,price=None):
-        # Establishing initial variables.
-        workbook = load_workbook("data\\" + self.filename + ".xlsx")
-        ws_data = workbook["Data"]
-        
-        # row_target depends on wheter new data is being added,
-        # or if inputted price is altering threshold row.
-        if price == None:
-            price = self.get_price()
-            row_target = ws_data.max_row + 1
-            row_target_title = ws_data.cell(row_target,1)
-            row_target_title.value = time.strftime("%d %b %y, %H:%M%p",
-                                                   time.localtime())
+        # Defaulted cryoptothresh is priciepoint exchange rates.
+        if cryptothresh is None:
+            price = scrape_price(self.link, 
+                                 self.driver_loc,
+                                 self.filename)
+            self.cryptothresh = dict(zip(['USD',*currencies], 
+                                  [price, 
+                                   *[price * currency_data()[i]
+                                     for i in currencies]]))
         else:
-            row_target = 2
+            self.cryptothresh = cryptothresh
         
-        # Defines list of exchange rates of price, along with USD price itself. 
-        exchange_rates = [price]
-        for crypto in self.cryptocurrencies:
-            exchange_rates.append(float(currency_data()[crypto])*price)
-    
-        # Appends all exchange rates to the the targeted row.
-        for row in ws_data.iter_rows(min_row = row_target, max_row = row_target,
-                                    min_col = 2, max_col = 1 + len(exchange_rates)):
-            for i,cell in enumerate(row):
-                cell.value = exchange_rates[i]
-        
-        # Saving to workbook. 
-        workbook.save("data\\" + self.filename + '.xlsx')
-        return 
-
-    ## Retrieves price through webscraping.
-    def get_price(self):
-        # Executes Selenium Chrome driver. 
-        driver = webdriver.Chrome(self.driver_location) 
-        driver.get(self.link)
-        
-        # Writes product page HTML to a document within directory.
-        with open("data\\" + self.filename + "_page.html", "w",encoding = 'utf-8') as f:
-            f.write(driver.page_source)
-        
-        # Retrieves price from HTML document. 
-        with open("data\\" + self.filename + "_page.html", "rb") as f:
-            soup = BeautifulSoup(f,'lxml')
-        price_usd = soup.find('span',class_='a-offscreen').text.replace('$','')
-        return float(price_usd)
-
-
-    ## Saves object to directory.
-    # A different filename may be specified to generate alternate pickle instance.
-    def save_pickle(self,filename = None):
-        # Uses own filename if none inputted. 
-        if filename == None:
-            filename = self.filename
-        
-        # Opens file and rewrites pickle. 
-        pickle_file = open("data\\" + filename + '.pickle', 'wb')
-        pickle.dump(self,pickle_file)
-        return 
-
-    ## Delivers email notification to user.
-    def email_notification(self, title, content):
-        date = time.strftime("%d %b %y, %H:%M%p",time.localtime())
-        title = "Amazon-Crypto Tracker:" + self.filename + date
-        yagmail.SMTP(self.sender).send(self.recipient,title,content)
-        return 
+        # Defaulted dataframe only contains thresholds.    
+        if dataframe is None:
+            self.df = pd.DataFrame(index=["Threshold"],
+                                   columns=['USD',
+                                            *currencies])
+        else:
+            self.df = dataframe
+            # Ensures dataframe incorporates all provided cryptothresholds.
+            for i in list(set().union(self.df.columns,
+                                      cryptothresh.keys())):
+                self.df[i] = None
 
 
 
-        
+        # Registers delivering email and password.
+        if password is not None:
+            yagmail.register(email_sender, password)
 
+        return
 
+    # Updates dataframe to include present value of .
+    def update_df(self):
+        pass
 
-
-
-
+    # Notifies user through email.
+    def email_notify(self, title, content):
+        title = "Amazon-Crypto Tracker:" + self.filename + time_present
+        yagmail.SMTP(self.sender).send(self.recipient, title, content)
+        return
