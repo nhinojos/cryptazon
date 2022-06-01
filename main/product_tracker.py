@@ -1,3 +1,4 @@
+from turtle import update
 import requests
 from time import strftime, localtime
 import yagmail
@@ -19,8 +20,8 @@ class ProductTracker:
         password: str = None,
         thresholds: dict = None,
         filename: str = 'product',
-        driver_loc: str = "C:\\chromedriver.exe",
-        csv_loc: str = None
+        driver_path: str = "C:\\chromedriver.exe",
+        csv_path: str = None
     ) -> None:
         
         self.product_link = product_link
@@ -32,25 +33,39 @@ class ProductTracker:
         if password is not None:
             yagmail.register(email_sender, password)
         
-        self.driver_loc = driver_loc
+        self.driver_path = driver_path
         self.filename = filename
-        self.tresholds = thresholds
+        self.thresholds = thresholds
         self._to_id()
         
         # Assigns empty threshold values to corresponding product price
         # in terms of currency exchange rate.
-        for key,val in zip(self.thresholds.keys(), self.tresholds.values()):
+        update_data = True
+        for key,val in zip(self.thresholds.keys(), self.thresholds.values()):
             if val == None:
-                self.tresholds[key] = self.exchange_rate_usd(key)
+                if key == "usd":
+                    self.thresholds[key] = self.scrape_price()
+                    update_data = False
+                else:
+                    self.thresholds[key] = (
+                        self.thresholds["usd"] 
+                        / self.coin_value_usd(key)
+                    )
         
-        if csv_loc is None:
+        if csv_path is None:
             self.df = pd.DataFrame(columns=['USD',*self.thresholds.keys()])
-            self.update_df()
+            if update_data:
+                self.update_df()
         else:
-            self.df = pd.read_csv(csv_loc)
+            self.df = pd.read_csv(csv_path)
+        
         
     @staticmethod
     def present_date(include_time: bool = False) -> str:
+        """
+        Returns the present date is DD-MM-YYYY Format. May include 
+        24-hour time as well, formatted as HH:MM.
+        """
         date = strftime("%d-%m-%Y", localtime())
         if include_time:
             date += " " + strftime("%H:%M", localtime())
@@ -58,12 +73,13 @@ class ProductTracker:
 
 
     def currency_history(
-        id: str, date: str, display: bool = False
+        id: str, 
+        date: str,
+        display: bool = False
     ) -> dict:
         """
         API call for historical cryptocurrency rates.
         """
-        
         data = requests.get(
             "https://api.coingecko.com/api/v3/coins/" 
             + id 
@@ -77,18 +93,19 @@ class ProductTracker:
         return data
 
 
-    def scrape_price(
-        link: str, driver_loc: str, filename: str = 'product'
-    ) -> float:
+    def scrape_price(self) -> float:
         """
         Scrapes Amazon's productpage for current USD pricepoint.
         """
-        
-        driver = webdriver.Chrome(driver_loc)
-        driver.get(link)
-        with open( "data\\"+ filename + "_page.html", "w", encoding='utf-8') as f:
+        driver = webdriver.Chrome(self.driver_path)
+        driver.get(self.product_link)
+        with open( 
+            "data\\" + self.filename + "_page.html", 
+            "w", 
+            encoding='utf-8'
+        ) as f:
             f.write(driver.page_source)
-        with open("data\\"+ filename + "_page.html","rb") as f:
+        with open("data\\"+ self.filename + "_page.html","rb") as f:
             soup=BeautifulSoup(f, 'lxml')
         return float(
             soup.find("span", class_="a-offscreen").text.replace("$", "")
@@ -100,7 +117,7 @@ class ProductTracker:
         Scrapes for a new pricepoint and adds it to Dataframe.
         """
         usd_price = self.scrape_price()
-        pd.df[self.present_date()] = [
+        self.df[self.present_date()] = [
             usd_price,
             *[usd_price ]
             ]
@@ -108,19 +125,15 @@ class ProductTracker:
         
     def email_notify(self, title, content):
         """
-        Notifies user through email.
+        Delivers email notification to user.
         """
         title = "Amazon-Crypto Tracker:" + self.filename + strftime()
         yagmail.SMTP(self.sender).send(self.recipient, title, content)
         return
     
     
-    def exchange_rate_usd(self, coin_id):
-        return self.scrape_price(
-            self.product_link, 
-            self.driver_loc,
-            self.filename
-        ) / requests.get(
+    def coin_value_usd(self, coin_id):
+        return 1 / requests.get(
             "https://api.coingecko.com/api/v3/coins/" + coin_id
         ).json()["market_data"]["current_price"]["usd"]
     
@@ -129,11 +142,12 @@ class ProductTracker:
         Standardizes every currency key to CoingGecko's ID Format. 
         """
         coingecko_options = requests.get(
-            "https://api.coingecko.com/api/v3/indexes"
+            "https://api.coingecko.com/api/v3/coins/list"
         ).json()
         
-        # 
         for term_old in self.thresholds.keys():
+            if term_old == "usd":
+                continue
             if type(term_old) != str:
                 raise TypeError(str(term_old) + "must be type str")
                 
@@ -145,11 +159,11 @@ class ProductTracker:
                     break
             if not found:        
                 raise NameError(
-                    term_old + "not found for CoinGecko's API"
-                    "Please ensure" + term_old + "is spelled correctly" 
+                    "'" + term_old + "' not found in CoinGecko's API."
+                    " Please ensure '" + term_old + "' is spelled correctly" 
                 )
     
-        self.tresholds.update(term_new, self.tresholds.pop(term_old))
+        self.thresholds.update({term_new: self.thresholds.pop(term_old)})
         return       
          
          
@@ -157,11 +171,6 @@ class ProductTracker:
         """
         Ensures network connection is valid.
         """    
-        try:
-            requests.get(self.product_link)
-        except ConnectionError:
-            raise ConnectionError( "Product page not accessible.")
-        
         try:
             requests.get(
                 "https://api.coingecko.com/api/v3/ping"
