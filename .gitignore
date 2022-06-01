@@ -1,0 +1,5 @@
+#Untracked Files
+*.html
+*__pycache__
+*.pyc
+test.py
