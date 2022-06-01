@@ -26,15 +26,17 @@ class ProductTracker:
         self._validate_connection()
         self.email_recipient = email_recipient
         self.email_sender = email_sender
+        
         # Registers password if not so done already.
         if password is not None:
             yagmail.register(email_sender, password)
         self.driver_path = driver_path
         self.filename = filename
-        self.thresholds = thresholds
-        self._to_id()
+
         # Assigns empty threshold values to corresponding product price
         # in terms of currency exchange rate.
+        self.thresholds = thresholds
+        self._to_id()
         update_data = True
         for key,val in zip(self.thresholds.keys(), self.thresholds.values()):
             if val == None:
@@ -49,7 +51,7 @@ class ProductTracker:
                     )
         
         if csv_path is None:
-            self.df = pd.DataFrame(columns=self.thresholds.keys())
+            self.df = pd.DataFrame(columns=["date",*self.thresholds.keys()])
             if update_data:
                 self.update_df()
         
@@ -69,11 +71,7 @@ class ProductTracker:
         return date
 
 
-    def currency_history(
-        id: str, 
-        date: str,
-        display: bool = False
-    ) -> dict:
+    def currency_history(id: str, date: str, display: bool = False) -> dict:
         """
         API call for historical cryptocurrency rates.
         """
@@ -114,7 +112,7 @@ class ProductTracker:
         Scrapes for a new pricepoint and adds it to Dataframe.
         """
         price_usd = self.scrape_price()
-        new_row = [price_usd]
+        new_row = [self.present_date(),price_usd]
         for currency in list(self.thresholds.keys()):
             if currency == 'usd':
                 continue
@@ -158,7 +156,7 @@ class ProductTracker:
                 
             found = False
             for option in coingecko_options:
-                if term_old in list(option.values())[:3]:
+                if term_old.lower() in list(option.values())[:3]:
                     term_new = option['id']
                     found = True
                     break
