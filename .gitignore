@@ -2,4 +2,5 @@
 *.html
 *__pycache__
 *.pyc
+data
 test.py
