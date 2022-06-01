@@ -49,11 +49,11 @@ class ProductTracker:
                 else:
                     self.thresholds[key] = (
                         self.thresholds["usd"] 
-                        / self.coin_value_usd(key)
+                        / self.coins_per_usd(key)
                     )
         
         if csv_path is None:
-            self.df = pd.DataFrame(columns=['USD',*self.thresholds.keys()])
+            self.df = pd.DataFrame(columns=self.thresholds.keys())
             if update_data:
                 self.update_df()
         else:
@@ -116,11 +116,14 @@ class ProductTracker:
         """
         Scrapes for a new pricepoint and adds it to Dataframe.
         """
-        usd_price = self.scrape_price()
-        self.df[self.present_date()] = [
-            usd_price,
-            *[usd_price ]
-            ]
+        price_usd = self.scrape_price()
+        new_row = [price_usd]
+        for currency in list(self.thresholds.keys()):
+            if currency == 'usd':
+                continue
+            else:
+                new_row.append(price_usd * self.coins_per_usd(currency))
+        self.df.loc[len(self.df.index)] = new_row
         return
         
     def email_notify(self, title, content):
@@ -132,7 +135,7 @@ class ProductTracker:
         return
     
     
-    def coin_value_usd(self, coin_id):
+    def coins_per_usd(self, coin_id):
         return 1 / requests.get(
             "https://api.coingecko.com/api/v3/coins/" + coin_id
         ).json()["market_data"]["current_price"]["usd"]
@@ -177,16 +180,3 @@ class ProductTracker:
             ).json()
         except ConnectionError:
             raise ConnectionError("CoinGecko API not accessible.")
-        
-
-    
-
-    
-
-        
-    
-
-
-
-    
-
