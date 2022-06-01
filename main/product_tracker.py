@@ -1,8 +1,6 @@
-from turtle import update
 import requests
 from time import strftime, localtime
 import yagmail
-import numpy as np
 import pandas as pd
 from bs4 import BeautifulSoup
 from selenium import webdriver
@@ -28,16 +26,13 @@ class ProductTracker:
         self._validate_connection()
         self.email_recipient = email_recipient
         self.email_sender = email_sender
-        
         # Registers password if not so done already.
         if password is not None:
             yagmail.register(email_sender, password)
-        
         self.driver_path = driver_path
         self.filename = filename
         self.thresholds = thresholds
         self._to_id()
-        
         # Assigns empty threshold values to corresponding product price
         # in terms of currency exchange rate.
         update_data = True
@@ -46,6 +41,7 @@ class ProductTracker:
                 if key == "usd":
                     self.thresholds[key] = self.scrape_price()
                     update_data = False
+                
                 else:
                     self.thresholds[key] = (
                         self.thresholds["usd"] 
@@ -56,6 +52,7 @@ class ProductTracker:
             self.df = pd.DataFrame(columns=self.thresholds.keys())
             if update_data:
                 self.update_df()
+        
         else:
             self.df = pd.read_csv(csv_path)
         
@@ -126,6 +123,7 @@ class ProductTracker:
         self.df.loc[len(self.df.index)] = new_row
         return
         
+        
     def email_notify(self, title, content):
         """
         Delivers email notification to user.
@@ -136,9 +134,13 @@ class ProductTracker:
     
     
     def coins_per_usd(self, coin_id):
+        """
+        Current USD exchange rate for specified cryptocurrency. 
+        """
         return 1 / requests.get(
             "https://api.coingecko.com/api/v3/coins/" + coin_id
         ).json()["market_data"]["current_price"]["usd"]
+    
     
     def _to_id(self) -> None:
         """
