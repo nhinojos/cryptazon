@@ -1,19 +1,17 @@
 import requests
 from time import strftime, localtime
-import yagmail
 import pandas as pd
 from bs4 import BeautifulSoup
 from selenium import webdriver
 
 
-class ProductTracker:
+class CryptazonTracker:
     """
     Tracks products price history, notifies of changes.
     """
     def __init__(
         self,
         product_link: str,
-        password: str = None,
         thresholds: dict = None,
         dataframe: pd.DataFrame = None,
         filename: str = 'product',
@@ -69,7 +67,7 @@ class ProductTracker:
         )
 
 
-    def coin_is_high(id: str, date: str, display: bool = False) -> dict:
+    def curreny_history(id: str, date: str, display: bool = False) -> dict:
         """
         API call for historical cryptocurrency rates.
         """
@@ -86,7 +84,7 @@ class ProductTracker:
         return data
 
 
-    def update_data(self):
+    def update_df(self):
         """
         Scrapes for a new pricepoint and adds it to Dataframe.
         """
@@ -99,7 +97,7 @@ class ProductTracker:
                 new_row.append(price_usd * self.coin_per_usd(currency))
         self.df.loc[len(self.df.index)] = new_row
         return
-
+    
 
     @staticmethod
     def current_date(include_time: bool = False) -> str:
