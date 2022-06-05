@@ -1,6 +1,6 @@
 #Untracked Files
 *.html
 *__pycache__
-*.pyc
+.vscode
 data
 test.py
